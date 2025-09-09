@@ -1,9 +1,18 @@
 use crate::token::{self, Literal, Token};
 
-enum Expr{
+#[derive(Debug, Clone)]
+pub enum LiteralValue {
+    Number(f64),
+    String(String),
+    True,
+    False,
+    Nil,
+}
+
+pub enum Expr{
     Binary(Box<Expr>, Token, Box<Expr>),
     Grouping(Box<Expr>),
-    Literal(token::Literal),
+    Literal(LiteralValue),
     Unary(Token, Box<Expr>),
 }
 
@@ -23,6 +32,7 @@ impl Expr{
             Expr::Unary(..) => visitor.visit_unary_expr(self),
         }
     }
+
 }
 
 pub struct AstPrinter;
@@ -66,9 +76,11 @@ impl Visitor<String> for AstPrinter{
     fn visit_literal_expr(&mut self, expr: &Expr) -> String {
         if let Expr::Literal(value) = expr {
             match value {
-                Literal::Identifier(s) => format!("\"{}\"", s),
-                Literal::Number(num) => num.to_string(),
-                Literal::String(s) => format!("\"{}\"", s),
+                LiteralValue::Number(num) => num.to_string(),
+                LiteralValue::String(s) => format!("\"{}\"", s),
+                LiteralValue::True => String::from("true"),
+                LiteralValue::False => String::from("false"),
+                LiteralValue::Nil => String::from("nil"),
             }
         } else {
             todo!("not implemented")
@@ -91,7 +103,7 @@ mod tests{
 
     #[test]
     fn test_ast_printer_literal(){
-        let expression = Expr::Literal(Literal::Number(123.0));
+        let expression = Expr::Literal(LiteralValue::Number(123.0));
         let mut printer = AstPrinter;
         assert_eq!(printer.print(&expression), "123");
     }
@@ -99,9 +111,9 @@ mod tests{
     #[test]
     fn test_ast_printer_binary_expression() {
         let expression = Expr::Binary(
-            Box::new(Expr::Literal(Literal::Number(1.0))),
+            Box::new(Expr::Literal(LiteralValue::Number(1.0))),
             Token::new(TokenType::Plus, "+".into(), None, 1),
-            Box::new(Expr::Literal(Literal::Number(2.0))),
+            Box::new(Expr::Literal(LiteralValue::Number(2.0))),
         );
 
         let mut printer = AstPrinter;
