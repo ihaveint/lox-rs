@@ -22,6 +22,7 @@ impl Lox{
         print!("running line: {}", line);
         let mut scanner = Scanner::new(line, self);
         let tokens = scanner.scan_tokens();
+        println!("tokens are: {:?}", tokens);
         // self.error(1, "test error"); // Example of setting had_error
 
     }

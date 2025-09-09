@@ -1,5 +1,30 @@
+use std::collections::HashMap;
 use crate::Lox;
 use crate::token::{Literal, Token, TokenType};
+use lazy_static::lazy_static;
+
+lazy_static!{
+    static ref KEYWORDS: HashMap<&'static str, TokenType> = {
+        let mut m = HashMap::new();
+        m.insert("and", TokenType::And);
+        m.insert("class", TokenType::Class);
+        m.insert("else", TokenType::Else);
+        m.insert("false", TokenType::False);
+        m.insert("for", TokenType::For);
+        m.insert("fun", TokenType::Fun);
+        m.insert("if", TokenType::If);
+        m.insert("nil", TokenType::Nil);
+        m.insert("or", TokenType::Or);
+        m.insert("print", TokenType::Print);
+        m.insert("return", TokenType::Return);
+        m.insert("super", TokenType::Super);
+        m.insert("this", TokenType::This);
+        m.insert("true", TokenType::True);
+        m.insert("var", TokenType::Var);
+        m.insert("while", TokenType::While);
+        m
+    };
+}
 
 pub struct Scanner<'a> {
     lox: &'a mut Lox,
@@ -95,12 +120,71 @@ impl<'a> Scanner<'a> {
                 self.string();
                 // self.add_token(TokenType::Literal,  Some(Literal::String("hallo".to_string())))
             }
-            _ => {
-                self.lox.error(1, "test error from scanner");
+
+            c => {
+                if self.is_digit(c){
+                    self.number();
+                } else if self.is_alphabet(c) {
+                    self.identifier();
+                }
+                else {
+                    self.lox.error(self.line, "Unexpected character.");
+                }
             },
         }
     }
 
+    fn identifier(&mut self) {
+        while self.is_alpha_numeric(self.peek()){
+            self.advance();
+        }
+
+        let text: &str = &self.source[self.start.. self.current];
+        let token_type = KEYWORDS.get(text);
+        match token_type {
+            Some(reserved_keyword) => {
+                self.add_token_without_literal(reserved_keyword.clone())
+            }
+            None => {
+                self.add_token(TokenType::Literal, Some(Literal::Identifier(text.into())))
+            }
+        }
+    }
+    fn is_alpha_numeric(&self, c: char) -> bool {
+        self.is_alphabet(c) || self.is_digit(c)
+    }
+    fn is_alphabet(&self, c: char) -> bool {
+        (c >= 'a' && c <= 'z') ||
+            (c >= 'A' && c <= 'Z') ||
+            c == '_'
+    }
+
+    fn number(&mut self){
+        while self.is_digit(self.peek()){
+            self.advance();
+        }
+
+        if self.peek() == '.' && self.is_digit(self.peek_next()){
+            self.advance();
+
+            while self.is_digit(self.peek()){
+                self.advance();
+            }
+        }
+
+        self.add_token(TokenType::Literal, Some(Literal::Number(self.source[self.start .. self.current].parse().unwrap())))
+    }
+
+    fn peek_next(&self) -> char{
+        if self.current + 1 >= self.source.len(){
+            return '\0';
+        }
+        return self.source.chars().nth(self.current + 1).unwrap();
+    }
+
+    fn is_digit(&self, c: char)->bool{
+        c.is_digit(10)
+    }
     fn string(&mut self) {
         while self.peek() != '"' && !self.is_at_end() {
             if self.peek() == '\n' {
@@ -121,7 +205,7 @@ impl<'a> Scanner<'a> {
 
     }
 
-    fn peek(&mut self) -> char{
+    fn peek(&self) -> char{
         if self.is_at_end(){
             return '\0'
         }

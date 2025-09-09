@@ -4,7 +4,7 @@ use std::fmt;
 pub enum Literal{
     Identifier(String),
     String(String),
-    Number(i64),
+    Number(f64),
 }
 
 
