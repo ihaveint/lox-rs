@@ -128,7 +128,7 @@ impl<'a> Scanner<'a> {
                     self.identifier();
                 }
                 else {
-                    self.lox.error(self.line, "Unexpected character.");
+                    self.lox.error_lexer(self.line, "Unexpected character.");
                 }
             },
         }
@@ -194,7 +194,7 @@ impl<'a> Scanner<'a> {
         }
 
         if self.is_at_end() {
-            self.lox.error(self.line, "Unterminated string");
+            self.lox.error_lexer(self.line, "Unterminated string");
             return
         }
 
