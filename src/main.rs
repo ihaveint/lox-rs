@@ -1,11 +1,16 @@
 mod token;
 mod scanner;
+mod parser;
+mod expression;
 
 use std::{env, fs, io};
 use std::fs::exists;
 use std::io::{stdout, Write};
 use std::process::exit;
 use scanner::Scanner;
+use crate::token::{Token, TokenType};
+use parser::Parser;
+use crate::expression::AstPrinter;
 
 struct Lox{
     had_error: bool,
@@ -23,13 +28,28 @@ impl Lox{
         let mut scanner = Scanner::new(line, self);
         let tokens = scanner.scan_tokens();
         println!("tokens are: {:?}", tokens);
-        // self.error(1, "test error"); // Example of setting had_error
+
+        let mut parser = Parser::new(tokens, self);
+        let expression = parser.parse();
+        if self.had_error{
+            return;
+        }
+
+        println!("{}", AstPrinter.print(&expression.unwrap()));
+    }
+
+    fn error_lexer(&mut self, line: usize, message: &str) {
+        self.report(line, "", message);
 
     }
 
-    fn error(&mut self, line: usize, message: &str) {
-        self.report(line, "", message);
-
+    fn error_parser(&mut self, token: &Token, message: &str) {
+        if token.token_type == TokenType::Eof {
+            self.report(token.line, " at end", message);
+        } else {
+            let where_in_cord = format!("at '{}'", token.lexeme);
+            self.report(token.line, &where_in_cord.as_str(), message);
+        }
     }
 
     fn report(&mut self, line: usize, where_in_code: &str, message: &str) {
