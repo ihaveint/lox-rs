@@ -9,6 +9,8 @@ pub enum LiteralValue {
     Nil,
 }
 
+
+
 pub enum Expr{
     Binary(Box<Expr>, Token, Box<Expr>),
     Grouping(Box<Expr>),
@@ -16,7 +18,7 @@ pub enum Expr{
     Unary(Token, Box<Expr>),
 }
 
-trait Visitor<T> {
+pub trait Visitor<T> {
     fn visit_binary_expr(&mut self, expr: &Expr) -> T;
     fn visit_grouping_expr(&mut self, expr: &Expr) -> T;
     fn visit_literal_expr(&mut self, expr: &Expr) -> T;
@@ -24,7 +26,7 @@ trait Visitor<T> {
 }
 
 impl Expr{
-    fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T{
+    pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T{
         match self {
             Expr::Binary(..) => visitor.visit_binary_expr(self),
             Expr::Grouping(..) => visitor.visit_grouping_expr(self),

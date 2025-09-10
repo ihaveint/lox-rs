@@ -2,6 +2,7 @@ mod token;
 mod scanner;
 mod parser;
 mod expression;
+mod interpreter;
 
 use std::{env, fs, io};
 use std::fs::exists;
