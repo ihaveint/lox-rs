@@ -185,7 +185,7 @@ impl Mul for LoxValue {
     type Output = Self;
     fn mul(self, other: Self) -> Self::Output {
         match (self, other) {
-            (LoxValue::Number(n), LoxValue::Number(n2)) => LoxValue::Number(n + n2),
+            (LoxValue::Number(n), LoxValue::Number(n2)) => LoxValue::Number(n * n2),
             _ => LoxValue::Nil,
         }
     }
