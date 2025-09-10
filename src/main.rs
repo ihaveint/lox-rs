@@ -1,10 +1,13 @@
 mod expression;
 mod interpreter;
 mod parser;
+mod runtime_error;
 mod scanner;
 mod token;
 
 use crate::expression::AstPrinter;
+use crate::interpreter::Interpreter;
+use crate::runtime_error::RuntimeError;
 use crate::token::{Token, TokenType};
 use parser::Parser;
 use scanner::Scanner;
@@ -15,11 +18,15 @@ use std::{env, fs, io};
 
 struct Lox {
     had_error: bool,
+    had_runtime_error: bool,
 }
 
 impl Lox {
     fn new() -> Lox {
-        Lox { had_error: false }
+        Lox {
+            had_error: false,
+            had_runtime_error: false,
+        }
     }
 
     fn run(&mut self, line: String) {
@@ -34,7 +41,10 @@ impl Lox {
             return;
         }
 
-        println!("{}", AstPrinter.print(&expression.unwrap()));
+        let mut interpreter = Interpreter::new(self);
+        // println!("{}", AstPrinter.print(&expression.unwrap()));
+
+        interpreter.interpret(&expression.unwrap());
     }
 
     fn error_lexer(&mut self, line: usize, message: &str) {
@@ -50,6 +60,11 @@ impl Lox {
         }
     }
 
+    fn error_runtime(&mut self, err: RuntimeError) {
+        println!("{}\n[line {}]", err.message, err.token.line);
+        self.had_runtime_error = true;
+    }
+
     fn report(&mut self, line: usize, where_in_code: &str, message: &str) {
         println!("[line {}] Error {}: {}", line, where_in_code, message);
         self.had_error = true;
@@ -61,6 +76,10 @@ impl Lox {
         self.run(content);
         if self.had_error {
             exit(65)
+        }
+
+        if self.had_runtime_error {
+            exit(70)
         }
     }
 

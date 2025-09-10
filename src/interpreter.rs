@@ -1,11 +1,13 @@
 use crate::expression::{Expr, LiteralValue, Visitor};
-use crate::token::TokenType;
+use crate::runtime_error;
+use crate::runtime_error::RuntimeError;
+use crate::token::{Token, TokenType};
 use crate::{Lox, expression};
 use std::cmp::Ordering;
 use std::fmt;
 use std::ops::{Add, Div, Mul, Neg, Not, Sub};
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 enum LoxValue {
     Number(f64),
     String(String),
@@ -52,11 +54,70 @@ impl fmt::Display for LoxValue {
     }
 }
 
-pub struct Interpreter;
+pub struct Interpreter<'a> {
+    lox: &'a mut Lox,
+}
 
-impl Interpreter {
-    fn evaluate(&mut self, expr: &Expr) -> LoxValue {
+impl<'a> Interpreter<'a> {
+    pub fn new(lox: &'a mut Lox) -> Interpreter<'a> {
+        Interpreter { lox }
+    }
+}
+
+impl<'a> Interpreter<'a> {
+    fn stringify(&mut self, value: &LoxValue) -> String {
+        match value {
+            LoxValue::Number(n) => format!("{}", n),
+            LoxValue::String(s) => format!("{}", s),
+            LoxValue::Boolean(b) => format!("{}", b),
+            LoxValue::Nil => String::from("nil"),
+        }
+    }
+
+    pub fn interpret(&mut self, expr: &Expr) {
+        match self.evaluate(expr) {
+            Ok(lox_value) => {
+                println!("{}", self.stringify(&lox_value));
+            }
+            Err(err) => self.lox.error_runtime(err),
+        }
+    }
+
+    fn evaluate(&mut self, expr: &Expr) -> Result<LoxValue, RuntimeError> {
         expr.accept(self)
+    }
+
+    fn check_number_operand(
+        &mut self,
+        operator: &Token,
+        operand: &LoxValue,
+    ) -> Result<(), RuntimeError> {
+        if let LoxValue::Number(n) = operand {
+            return Ok(());
+        }
+
+        Err(RuntimeError::new(
+            operator.clone(),
+            "Operand must be number.",
+        ))
+    }
+
+    fn check_number_operands(
+        &mut self,
+        operator: &Token,
+        left: &LoxValue,
+        right: &LoxValue,
+    ) -> Result<(), RuntimeError> {
+        if let LoxValue::Number(n) = left {
+            if let LoxValue::Number(n) = right {
+                return Ok(());
+            }
+        }
+
+        Err(RuntimeError::new(
+            operator.clone(),
+            "Operands must be numbers.",
+        ))
     }
 }
 
@@ -130,41 +191,41 @@ impl Mul for LoxValue {
     }
 }
 
-impl Visitor<LoxValue> for Interpreter {
-    fn visit_literal_expr(&mut self, expr: &Expr) -> LoxValue {
+impl<'a> Visitor<Result<LoxValue, RuntimeError>> for Interpreter<'a> {
+    fn visit_literal_expr(&mut self, expr: &Expr) -> Result<LoxValue, RuntimeError> {
         let Expr::Literal(value) = expr else {
             unreachable!()
         };
 
         match value {
-            LiteralValue::Number(num) => LoxValue::Number(*num),
-            LiteralValue::String(s) => LoxValue::String(s.clone()),
-            LiteralValue::True => LoxValue::Boolean(true),
-            LiteralValue::False => LoxValue::Boolean(false),
-            LiteralValue::Nil => LoxValue::Nil,
+            LiteralValue::Number(num) => Ok(LoxValue::Number(*num)),
+            LiteralValue::String(s) => Ok(LoxValue::String(s.clone())),
+            LiteralValue::True => Ok(LoxValue::Boolean(true)),
+            LiteralValue::False => Ok(LoxValue::Boolean(false)),
+            LiteralValue::Nil => Ok(LoxValue::Nil),
         }
     }
 
-    fn visit_grouping_expr(&mut self, expr: &Expr) -> LoxValue {
+    fn visit_grouping_expr(&mut self, expr: &Expr) -> Result<LoxValue, RuntimeError> {
         let Expr::Grouping(expression) = expr else {
             unreachable!()
         };
         self.evaluate(expression)
     }
 
-    fn visit_unary_expr(&mut self, expr: &Expr) -> LoxValue {
+    fn visit_unary_expr(&mut self, expr: &Expr) -> Result<LoxValue, RuntimeError> {
         let Expr::Unary(operator, expression) = expr else {
             unreachable!()
         };
 
-        let right = self.evaluate(expression);
+        let right = self.evaluate(expression)?;
         match operator.token_type {
             TokenType::Minus => {
-                return -right;
+                return Ok(-right);
             }
 
             TokenType::Bang => {
-                return !right;
+                return Ok(!right);
             }
             _ => {}
         }
@@ -172,43 +233,70 @@ impl Visitor<LoxValue> for Interpreter {
         unreachable!()
     }
 
-    fn visit_binary_expr(&mut self, expr: &Expr) -> LoxValue {
+    fn visit_binary_expr(&mut self, expr: &Expr) -> Result<LoxValue, RuntimeError> {
         let Expr::Binary(left, operator, right) = expr else {
             unreachable!()
         };
 
-        let left = self.evaluate(left);
-        let right = self.evaluate(right);
+        let left = self.evaluate(left)?;
+        let right = self.evaluate(right)?;
         match operator.token_type {
             TokenType::Minus => {
-                return left - right;
+                self.check_number_operand(operator, &right)?;
+
+                return Ok(left - right);
             }
             TokenType::Slash => {
-                return left / right;
+                self.check_number_operands(operator, &left, &right)?;
+
+                return Ok(left / right);
             }
             TokenType::Star => {
-                return left * right;
+                self.check_number_operands(operator, &left, &right)?;
+
+                return Ok(left * right);
             }
             TokenType::Plus => {
                 if left.is_numerical() && right.is_numerical() {
-                    return left + right;
+                    return Ok(left + right);
                 }
 
                 if left.is_string() && right.is_string() {
-                    return LoxValue::String(left.to_string() + right.to_string().as_str());
+                    return Ok(LoxValue::String(
+                        left.to_string() + right.to_string().as_str(),
+                    ));
                 }
+
+                return Err(RuntimeError::new(
+                    operator.clone(),
+                    "Operands must be two numbers or two strings.",
+                ));
             }
-            TokenType::Greater => return LoxValue::Boolean(left > right),
+            TokenType::Greater => {
+                self.check_number_operands(operator, &left, &right)?;
+                return Ok(LoxValue::Boolean(left > right));
+            }
+            TokenType::GreaterEqual => {
+                self.check_number_operands(operator, &left, &right)?;
 
-            TokenType::GreaterEqual => return LoxValue::Boolean(left >= right),
+                return Ok(LoxValue::Boolean(left >= right));
+            }
 
-            TokenType::Less => return LoxValue::Boolean(left < right),
+            TokenType::Less => {
+                self.check_number_operands(operator, &left, &right)?;
 
-            TokenType::LessEqual => return LoxValue::Boolean(left <= right),
+                return Ok(LoxValue::Boolean(left < right));
+            }
 
-            TokenType::BangEqual => return LoxValue::Boolean(left != right),
+            TokenType::LessEqual => {
+                self.check_number_operands(operator, &left, &right)?;
 
-            TokenType::EqualEqual => return LoxValue::Boolean(left == right),
+                return Ok(LoxValue::Boolean(left <= right));
+            }
+
+            TokenType::BangEqual => return Ok(LoxValue::Boolean(left != right)),
+
+            TokenType::EqualEqual => return Ok(LoxValue::Boolean(left == right)),
             _ => {}
         }
 
