@@ -1,9 +1,9 @@
-use std::collections::HashMap;
 use crate::Lox;
 use crate::token::{Literal, Token, TokenType};
 use lazy_static::lazy_static;
+use std::collections::HashMap;
 
-lazy_static!{
+lazy_static! {
     static ref KEYWORDS: HashMap<&'static str, TokenType> = {
         let mut m = HashMap::new();
         m.insert("and", TokenType::And);
@@ -35,10 +35,9 @@ pub struct Scanner<'a> {
     line: usize,
 }
 
-
 impl<'a> Scanner<'a> {
     pub fn new(source: String, lox: &'a mut Lox) -> Scanner<'a> {
-        Scanner{
+        Scanner {
             lox,
             source,
             tokens: Vec::new(),
@@ -49,20 +48,20 @@ impl<'a> Scanner<'a> {
     }
 
     pub fn scan_tokens(&mut self) -> Vec<Token> {
-        while !self.is_at_end(){
+        while !self.is_at_end() {
             self.start = self.current;
             self.scan_token()
         }
 
-        self.tokens.push(Token::new(TokenType::Eof, "".to_string(), None, self.line));
-        return self.tokens.clone()
+        self.tokens
+            .push(Token::new(TokenType::Eof, "".to_string(), None, self.line));
+        return self.tokens.clone();
     }
 
-
-    fn scan_token(&mut self){
+    fn scan_token(&mut self) {
         let c: char = self.advance();
 
-        match c{
+        match c {
             '(' => self.add_token_without_literal(TokenType::LeftParen),
             ')' => self.add_token_without_literal(TokenType::RightParen),
             '{' => self.add_token_without_literal(TokenType::LeftBrace),
@@ -102,7 +101,7 @@ impl<'a> Scanner<'a> {
                 }
             }
             '/' => {
-                if self.matches('/'){
+                if self.matches('/') {
                     while self.peek() != '\n' && !self.is_at_end() {
                         self.advance();
                     }
@@ -122,67 +121,65 @@ impl<'a> Scanner<'a> {
             }
 
             c => {
-                if self.is_digit(c){
+                if self.is_digit(c) {
                     self.number();
                 } else if self.is_alphabet(c) {
                     self.identifier();
-                }
-                else {
+                } else {
                     self.lox.error_lexer(self.line, "Unexpected character.");
                 }
-            },
+            }
         }
     }
 
     fn identifier(&mut self) {
-        while self.is_alpha_numeric(self.peek()){
+        while self.is_alpha_numeric(self.peek()) {
             self.advance();
         }
 
-        let text: &str = &self.source[self.start.. self.current];
+        let text: &str = &self.source[self.start..self.current];
         let token_type = KEYWORDS.get(text);
         match token_type {
-            Some(reserved_keyword) => {
-                self.add_token_without_literal(reserved_keyword.clone())
-            }
-            None => {
-                self.add_token(TokenType::Literal, Some(Literal::Identifier(text.into())))
-            }
+            Some(reserved_keyword) => self.add_token_without_literal(reserved_keyword.clone()),
+            None => self.add_token(TokenType::Literal, Some(Literal::Identifier(text.into()))),
         }
     }
     fn is_alpha_numeric(&self, c: char) -> bool {
         self.is_alphabet(c) || self.is_digit(c)
     }
     fn is_alphabet(&self, c: char) -> bool {
-        (c >= 'a' && c <= 'z') ||
-            (c >= 'A' && c <= 'Z') ||
-            c == '_'
+        (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_'
     }
 
-    fn number(&mut self){
-        while self.is_digit(self.peek()){
+    fn number(&mut self) {
+        while self.is_digit(self.peek()) {
             self.advance();
         }
 
-        if self.peek() == '.' && self.is_digit(self.peek_next()){
+        if self.peek() == '.' && self.is_digit(self.peek_next()) {
             self.advance();
 
-            while self.is_digit(self.peek()){
+            while self.is_digit(self.peek()) {
                 self.advance();
             }
         }
 
-        self.add_token(TokenType::Literal, Some(Literal::Number(self.source[self.start .. self.current].parse().unwrap())))
+        self.add_token(
+            TokenType::Literal,
+            Some(Literal::Number(
+                self.source[self.start..self.current].parse().unwrap(),
+            )),
+        )
     }
 
-    fn peek_next(&self) -> char{
-        if self.current + 1 >= self.source.len(){
+    fn peek_next(&self) -> char {
+        if self.current + 1 >= self.source.len() {
             return '\0';
         }
         return self.source.chars().nth(self.current + 1).unwrap();
     }
 
-    fn is_digit(&self, c: char)->bool{
+    fn is_digit(&self, c: char) -> bool {
         c.is_digit(10)
     }
     fn string(&mut self) {
@@ -195,34 +192,33 @@ impl<'a> Scanner<'a> {
 
         if self.is_at_end() {
             self.lox.error_lexer(self.line, "Unterminated string");
-            return
+            return;
         }
 
         let value: String = self.source[self.start..self.current].into();
         self.add_token(TokenType::Literal, Some(Literal::String(value)));
 
         self.advance(); // should return '"'
-
     }
 
-    fn peek(&self) -> char{
-        if self.is_at_end(){
-            return '\0'
+    fn peek(&self) -> char {
+        if self.is_at_end() {
+            return '\0';
         }
         return self.source.chars().nth(self.current).unwrap();
     }
 
     fn matches(&mut self, expected: char) -> bool {
-        if self.is_at_end(){
-            return false
+        if self.is_at_end() {
+            return false;
         }
 
-        if self.source.chars().nth(self.current) != Some(expected){
-            return false
+        if self.source.chars().nth(self.current) != Some(expected) {
+            return false;
         }
 
         self.current += 1;
-        return true
+        return true;
     }
 
     fn advance(&mut self) -> char {
@@ -231,14 +227,15 @@ impl<'a> Scanner<'a> {
         response
     }
 
-    fn add_token_without_literal(&mut self, token_type: TokenType){
+    fn add_token_without_literal(&mut self, token_type: TokenType) {
         self.add_token(token_type, None)
     }
 
-    fn add_token(&mut self, token_type: TokenType, literal: Option<Literal>){
+    fn add_token(&mut self, token_type: TokenType, literal: Option<Literal>) {
         let text: String = self.source[self.start..self.current].to_string();
 
-        self.tokens.push(Token::new(token_type, text, literal, self.line));
+        self.tokens
+            .push(Token::new(token_type, text, literal, self.line));
     }
 
     fn is_at_end(&self) -> bool {

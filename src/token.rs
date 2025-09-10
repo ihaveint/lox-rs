@@ -1,15 +1,14 @@
 use std::fmt;
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum Literal{
+pub enum Literal {
     Identifier(String),
     String(String),
     Number(f64),
 }
 
-
 #[derive(Debug, PartialEq, Clone)]
-pub enum TokenType{
+pub enum TokenType {
     // Single-character tokens.
     LeftParen,
     RightParen,
@@ -88,20 +87,31 @@ impl fmt::Display for Literal {
     }
 }
 
-
-impl Token{
-    pub fn new(token_type: TokenType, lexeme: String, literal: Option<Literal>, line: usize) -> Token{
-        Token{token_type, lexeme, literal, line}
+impl Token {
+    pub fn new(
+        token_type: TokenType,
+        lexeme: String,
+        literal: Option<Literal>,
+        line: usize,
+    ) -> Token {
+        Token {
+            token_type,
+            lexeme,
+            literal,
+            line,
+        }
     }
 
-    pub fn to_string(&self) -> String{
-        match &self.literal{
+    pub fn to_string(&self) -> String {
+        match &self.literal {
             Some(literal) => {
-                self.token_type.to_string() + " " + &self.lexeme + " " + literal.clone().to_string().as_str()
+                self.token_type.to_string()
+                    + " "
+                    + &self.lexeme
+                    + " "
+                    + literal.clone().to_string().as_str()
             }
-            None => {
-                self.token_type.to_string() + " " + &self.lexeme
-            }
+            None => self.token_type.to_string() + " " + &self.lexeme,
         }
     }
 }

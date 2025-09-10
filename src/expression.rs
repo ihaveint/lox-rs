@@ -9,9 +9,7 @@ pub enum LiteralValue {
     Nil,
 }
 
-
-
-pub enum Expr{
+pub enum Expr {
     Binary(Box<Expr>, Token, Box<Expr>),
     Grouping(Box<Expr>),
     Literal(LiteralValue),
@@ -25,8 +23,8 @@ pub trait Visitor<T> {
     fn visit_unary_expr(&mut self, expr: &Expr) -> T;
 }
 
-impl Expr{
-    pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T{
+impl Expr {
+    pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
         match self {
             Expr::Binary(..) => visitor.visit_binary_expr(self),
             Expr::Grouping(..) => visitor.visit_grouping_expr(self),
@@ -34,21 +32,20 @@ impl Expr{
             Expr::Unary(..) => visitor.visit_unary_expr(self),
         }
     }
-
 }
 
 pub struct AstPrinter;
 
-impl AstPrinter{
-    pub fn print(&mut self, expr: &Expr) -> String{
+impl AstPrinter {
+    pub fn print(&mut self, expr: &Expr) -> String {
         expr.accept(self)
     }
 
-    fn parenthesize(&mut self, name: &str, exprs: &[&Expr]) -> String{
+    fn parenthesize(&mut self, name: &str, exprs: &[&Expr]) -> String {
         let mut builder = String::new();
         builder.push_str("(");
         builder.push_str(name);
-        for expr in exprs{
+        for expr in exprs {
             builder.push_str(" ");
             builder.push_str(&expr.accept(self));
         }
@@ -58,9 +55,9 @@ impl AstPrinter{
     }
 }
 
-impl Visitor<String> for AstPrinter{
+impl Visitor<String> for AstPrinter {
     fn visit_binary_expr(&mut self, expr: &Expr) -> String {
-        if let Expr::Binary(left, operator, right) = expr{
+        if let Expr::Binary(left, operator, right) = expr {
             self.parenthesize(&operator.lexeme, &[&left, &right])
         } else {
             todo!("not implemented")
@@ -68,7 +65,7 @@ impl Visitor<String> for AstPrinter{
     }
 
     fn visit_grouping_expr(&mut self, expr: &Expr) -> String {
-        if let Expr::Grouping(expression) = expr{
+        if let Expr::Grouping(expression) = expr {
             self.parenthesize("group", &[&expression])
         } else {
             todo!("not implemented")
@@ -99,12 +96,12 @@ impl Visitor<String> for AstPrinter{
 }
 
 #[cfg(test)]
-mod tests{
-    use crate::token::TokenType;
+mod tests {
     use super::*;
+    use crate::token::TokenType;
 
     #[test]
-    fn test_ast_printer_literal(){
+    fn test_ast_printer_literal() {
         let expression = Expr::Literal(LiteralValue::Number(123.0));
         let mut printer = AstPrinter;
         assert_eq!(printer.print(&expression), "123");

@@ -1,12 +1,12 @@
-use std::fmt;
-use std::ops::{Neg, Not, Add, Sub, Div, Mul};
-use std::cmp::Ordering;
-use crate::{expression, Lox};
-use crate::expression::{Visitor, Expr, LiteralValue};
+use crate::expression::{Expr, LiteralValue, Visitor};
 use crate::token::TokenType;
+use crate::{Lox, expression};
+use std::cmp::Ordering;
+use std::fmt;
+use std::ops::{Add, Div, Mul, Neg, Not, Sub};
 
 #[derive(PartialEq)]
-enum LoxValue{
+enum LoxValue {
     Number(f64),
     String(String),
     Boolean(bool),
@@ -25,25 +25,25 @@ impl PartialOrd for LoxValue {
     }
 }
 
-impl LoxValue{
-    fn is_numerical(&self) -> bool{
-        match self{
+impl LoxValue {
+    fn is_numerical(&self) -> bool {
+        match self {
             LoxValue::Number(_) => true,
-            _ => false
+            _ => false,
         }
     }
 
-    fn is_string(&self) -> bool{
-        match self{
+    fn is_string(&self) -> bool {
+        match self {
             LoxValue::String(_) => true,
-            _ => false
+            _ => false,
         }
     }
 }
 
 impl fmt::Display for LoxValue {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self{
+        match self {
             LoxValue::Number(n) => write!(f, "{}", n),
             LoxValue::String(s) => write!(f, "{}", s),
             LoxValue::Boolean(b) => write!(f, "{}", b),
@@ -54,15 +54,15 @@ impl fmt::Display for LoxValue {
 
 pub struct Interpreter;
 
-impl Interpreter{
-    fn evaluate(&mut self, expr: &Expr) -> LoxValue{
+impl Interpreter {
+    fn evaluate(&mut self, expr: &Expr) -> LoxValue {
         expr.accept(self)
     }
 }
 
-impl Not for LoxValue{
+impl Not for LoxValue {
     type Output = Self;
-    fn not(self) -> Self::Output{
+    fn not(self) -> Self::Output {
         match self {
             LoxValue::Boolean(b) => LoxValue::Boolean(!b),
             LoxValue::Nil => LoxValue::Boolean(true),
@@ -73,7 +73,7 @@ impl Not for LoxValue{
 
 impl Neg for LoxValue {
     type Output = Self;
-    fn neg(self) -> Self::Output{
+    fn neg(self) -> Self::Output {
         match self {
             LoxValue::Number(n) => LoxValue::Number(-n),
             LoxValue::String(s) => todo!(),
@@ -84,29 +84,29 @@ impl Neg for LoxValue {
     }
 }
 
-impl Sub for LoxValue{
+impl Sub for LoxValue {
     type Output = Self;
-    fn sub(self, other: Self) -> Self::Output{
+    fn sub(self, other: Self) -> Self::Output {
         match (self, other) {
-            (LoxValue::Number(n), LoxValue::Number(n2)) => LoxValue::Number(n-n2),
+            (LoxValue::Number(n), LoxValue::Number(n2)) => LoxValue::Number(n - n2),
             _ => LoxValue::Nil,
         }
     }
 }
 
-impl Add for LoxValue{
+impl Add for LoxValue {
     type Output = Self;
-    fn add(self, other: Self) -> Self::Output{
+    fn add(self, other: Self) -> Self::Output {
         match (self, other) {
-            (LoxValue::Number(n), LoxValue::Number(n2)) => LoxValue::Number(n+n2),
+            (LoxValue::Number(n), LoxValue::Number(n2)) => LoxValue::Number(n + n2),
             _ => LoxValue::Nil,
         }
     }
 }
 
-impl Div for LoxValue{
+impl Div for LoxValue {
     type Output = Self;
-    fn div(self, other: Self) -> Self::Output{
+    fn div(self, other: Self) -> Self::Output {
         match (self, other) {
             (LoxValue::Number(n), LoxValue::Number(n2)) => {
                 if n2 == 0.0 {
@@ -114,25 +114,27 @@ impl Div for LoxValue{
                 } else {
                     LoxValue::Number(n / n2)
                 }
-            },
+            }
             _ => LoxValue::Nil,
         }
     }
 }
 
-impl Mul for LoxValue{
+impl Mul for LoxValue {
     type Output = Self;
-    fn mul(self, other: Self) -> Self::Output{
+    fn mul(self, other: Self) -> Self::Output {
         match (self, other) {
-            (LoxValue::Number(n), LoxValue::Number(n2)) => LoxValue::Number(n+n2),
+            (LoxValue::Number(n), LoxValue::Number(n2)) => LoxValue::Number(n + n2),
             _ => LoxValue::Nil,
         }
     }
 }
 
-impl Visitor<LoxValue> for Interpreter{
+impl Visitor<LoxValue> for Interpreter {
     fn visit_literal_expr(&mut self, expr: &Expr) -> LoxValue {
-        let Expr::Literal(value) = expr else { unreachable!() };
+        let Expr::Literal(value) = expr else {
+            unreachable!()
+        };
 
         match value {
             LiteralValue::Number(num) => LoxValue::Number(*num),
@@ -144,12 +146,16 @@ impl Visitor<LoxValue> for Interpreter{
     }
 
     fn visit_grouping_expr(&mut self, expr: &Expr) -> LoxValue {
-        let Expr::Grouping(expression) = expr else { unreachable!() };
+        let Expr::Grouping(expression) = expr else {
+            unreachable!()
+        };
         self.evaluate(expression)
     }
 
     fn visit_unary_expr(&mut self, expr: &Expr) -> LoxValue {
-        let Expr::Unary(operator, expression) = expr else { unreachable!() };
+        let Expr::Unary(operator, expression) = expr else {
+            unreachable!()
+        };
 
         let right = self.evaluate(expression);
         match operator.token_type {
@@ -167,7 +173,9 @@ impl Visitor<LoxValue> for Interpreter{
     }
 
     fn visit_binary_expr(&mut self, expr: &Expr) -> LoxValue {
-        let Expr::Binary(left, operator, right) = expr else { unreachable!() };
+        let Expr::Binary(left, operator, right) = expr else {
+            unreachable!()
+        };
 
         let left = self.evaluate(left);
         let right = self.evaluate(right);
@@ -182,37 +190,25 @@ impl Visitor<LoxValue> for Interpreter{
                 return left * right;
             }
             TokenType::Plus => {
-                if left.is_numerical() && right.is_numerical(){
+                if left.is_numerical() && right.is_numerical() {
                     return left + right;
                 }
 
                 if left.is_string() && right.is_string() {
-                    return LoxValue::String(left.to_string() + right.to_string().as_str())
+                    return LoxValue::String(left.to_string() + right.to_string().as_str());
                 }
             }
-            TokenType::Greater => {
-                return LoxValue::Boolean(left > right)
-            }
+            TokenType::Greater => return LoxValue::Boolean(left > right),
 
-            TokenType::GreaterEqual => {
-                return LoxValue::Boolean(left >= right)
-            }
+            TokenType::GreaterEqual => return LoxValue::Boolean(left >= right),
 
-            TokenType::Less => {
-                return LoxValue::Boolean(left < right)
-            }
+            TokenType::Less => return LoxValue::Boolean(left < right),
 
-            TokenType::LessEqual => {
-                return LoxValue::Boolean(left <= right)
-            }
+            TokenType::LessEqual => return LoxValue::Boolean(left <= right),
 
-            TokenType::BangEqual => {
-                return LoxValue::Boolean(left != right)
-            }
+            TokenType::BangEqual => return LoxValue::Boolean(left != right),
 
-            TokenType::EqualEqual => {
-                return LoxValue::Boolean(left == right)
-            }
+            TokenType::EqualEqual => return LoxValue::Boolean(left == right),
             _ => {}
         }
 

@@ -1,30 +1,28 @@
-mod token;
-mod scanner;
-mod parser;
 mod expression;
 mod interpreter;
+mod parser;
+mod scanner;
+mod token;
 
-use std::{env, fs, io};
-use std::fs::exists;
-use std::io::{stdout, Write};
-use std::process::exit;
-use scanner::Scanner;
+use crate::expression::AstPrinter;
 use crate::token::{Token, TokenType};
 use parser::Parser;
-use crate::expression::AstPrinter;
+use scanner::Scanner;
+use std::fs::exists;
+use std::io::{Write, stdout};
+use std::process::exit;
+use std::{env, fs, io};
 
-struct Lox{
+struct Lox {
     had_error: bool,
 }
 
-impl Lox{
-    fn new() -> Lox{
-        Lox{
-            had_error: false,
-        }
+impl Lox {
+    fn new() -> Lox {
+        Lox { had_error: false }
     }
 
-    fn run(&mut self, line: String){
+    fn run(&mut self, line: String) {
         print!("running line: {}", line);
         let mut scanner = Scanner::new(line, self);
         let tokens = scanner.scan_tokens();
@@ -32,7 +30,7 @@ impl Lox{
 
         let mut parser = Parser::new(tokens, self);
         let expression = parser.parse();
-        if self.had_error{
+        if self.had_error {
             return;
         }
 
@@ -41,7 +39,6 @@ impl Lox{
 
     fn error_lexer(&mut self, line: usize, message: &str) {
         self.report(line, "", message);
-
     }
 
     fn error_parser(&mut self, token: &Token, message: &str) {
@@ -62,7 +59,7 @@ impl Lox{
         println!("Running file: {}", file_path);
         let content = fs::read_to_string(file_path).expect("Could not read file");
         self.run(content);
-        if self.had_error{
+        if self.had_error {
             exit(65)
         }
     }
